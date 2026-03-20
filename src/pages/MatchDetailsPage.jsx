@@ -39,6 +39,17 @@ import { matchApi } from '../api/matchApi';
 import { paymentApi } from '../api/paymentApi';
 import { useAuth } from '../context/AuthContext';
 
+// Converts an absolute backend URL (http://103.x.x.x/uploads/...) to a relative
+// path (/uploads/...) so it flows through Vercel's proxy rewrite over HTTPS.
+function toProxiedUrl(url) {
+  if (!url) return null;
+  try {
+    return new URL(url).pathname;
+  } catch {
+    return url;
+  }
+}
+
 export default function MatchDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -149,7 +160,7 @@ export default function MatchDetailsPage() {
                       variant="text"
                       size="small"
                       startIcon={<ImageIcon />}
-                      onClick={() => setPreviewUrl(myPayment.fileUrl)}
+                      onClick={() => setPreviewUrl(toProxiedUrl(myPayment.fileUrl))}
                     >
                       View uploaded proof
                     </Button>
@@ -215,7 +226,7 @@ export default function MatchDetailsPage() {
                                 <Tooltip title="View proof">
                                   <IconButton
                                     size="small"
-                                    onClick={() => setPreviewUrl(payment.fileUrl)}
+                                    onClick={() => setPreviewUrl(toProxiedUrl(payment.fileUrl))}
                                   >
                                     <ImageIcon fontSize="small" />
                                   </IconButton>
