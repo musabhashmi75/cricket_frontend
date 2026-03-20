@@ -82,8 +82,8 @@ export default function Navbar() {
 
   const navItems = [
     { label: 'Matches',   path: '/matches' },
-    { label: 'Teams',     path: '/teams' },
-    { label: 'Dashboard', path: '/dashboard' },
+    ...(user ? [{ label: 'Teams',     path: '/teams' }]     : []),
+    ...(user ? [{ label: 'Dashboard', path: '/dashboard' }] : []),
     ...(isAdmin ? [{ label: 'Users', path: '/admin/users' }] : []),
   ];
 
@@ -134,7 +134,18 @@ export default function Navbar() {
             ))}
           </Box>
 
-          {/* Right side: role chip + user icon */}
+          {/* Right side: guest sign-in OR authenticated user menu */}
+          {!user && (
+            <Button
+              color="inherit"
+              variant="outlined"
+              size="small"
+              onClick={() => navigate('/login')}
+              sx={{ ml: 'auto', borderColor: 'rgba(255,255,255,0.5)', '&:hover': { borderColor: 'white' } }}
+            >
+              Sign In
+            </Button>
+          )}
           {user && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 'auto' }}>
               {user.passwordResetRequired && (

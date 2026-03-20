@@ -8,8 +8,10 @@ export const matchApi = {
   remove:     (id)        => client.delete(`/matches/${id}`),
   complete:   (id)        => client.post(`/matches/${id}/complete`).then(r => r.data),
   getPlayers: (matchId)   => client.get(`/matches/${matchId}/players`).then(r => r.data),
-  join:       (matchId, userId) =>
+  join:        (matchId, userId) =>
     client.post(`/matches/${matchId}/join`, { userId }).then(r => r.data),
-  leave:      (matchId, userId) =>
+  leave:       (matchId, userId) =>
     client.delete(`/matches/${matchId}/leave`, { params: { userId } }),
+  joinAsGuest: (matchId, guestName, guestContact) =>
+    client.post(`/matches/${matchId}/join-guest`, { guestName, guestContact }).then(r => r.data),
 };

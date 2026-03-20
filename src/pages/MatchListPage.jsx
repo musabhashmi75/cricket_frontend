@@ -58,8 +58,8 @@ export default function MatchListPage() {
 
   const [matches,       setMatches]       = useState([]);
   const [joinedIds,     setJoinedIds]     = useState(new Set());
-  const [memberTeamIds, setMemberTeamIds] = useState(new Set());  // teams user belongs to
-  const [ownedTeams,    setOwnedTeams]    = useState([]);          // teams user owns
+  const [memberTeamIds, setMemberTeamIds] = useState(new Set());
+  const [ownedTeams,    setOwnedTeams]    = useState([]);
   const [tab,           setTab]           = useState(0);
   const [loading,       setLoading]       = useState(true);
   const [error,         setError]         = useState('');
@@ -75,25 +75,38 @@ export default function MatchListPage() {
   const [deleteTarget,  setDeleteTarget]  = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  // Guest join dialog
+  const [guestTarget,   setGuestTarget]   = useState(null);   // match being joined as guest
+  const [guestName,     setGuestName]     = useState('');
+  const [guestContact,  setGuestContact]  = useState('');
+  const [guestLoading,  setGuestLoading]  = useState(false);
+  const [guestError,    setGuestError]    = useState('');
+
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const [allMatches, dashboard, teams] = await Promise.all([
-        matchApi.getAll(),
-        dashboardApi.player(user.userId),
-        teamApi.getAll(),
-      ]);
-      setMatches(allMatches);
-      setJoinedIds(new Set(dashboard.matches.map(m => m.matchId)));
-      setMemberTeamIds(new Set(teams.filter(t => t.member).map(t => t.id)));
-      setOwnedTeams(teams.filter(t => t.owner));
+      if (user) {
+        const [allMatches, dashboard, teams] = await Promise.all([
+          matchApi.getAll(),
+          dashboardApi.player(user.userId),
+          teamApi.getAll(),
+        ]);
+        setMatches(allMatches);
+        setJoinedIds(new Set(dashboard.matches.map(m => m.matchId)));
+        setMemberTeamIds(new Set(teams.filter(t => t.member).map(t => t.id)));
+        setOwnedTeams(teams.filter(t => t.owner));
+      } else {
+        // Guest: load public matches only, no auth required
+        const allMatches = await matchApi.getAll();
+        setMatches(allMatches);
+      }
     } catch (e) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
-  }, [user.userId]);
+  }, [user]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -207,10 +220,25 @@ export default function MatchListPage() {
     finally { setActionLoading(null); }
   };
 
+  const handleGuestJoin = async () => {
+    if (!guestName.trim())    { setGuestError('Name is required.'); return; }
+    if (!guestContact.trim()) { setGuestError('Phone or email is required.'); return; }
+    setGuestLoading(true); setGuestError('');
+    try {
+      await matchApi.joinAsGuest(guestTarget.id, guestName.trim(), guestContact.trim());
+      setToast(`Joined as guest! The organiser will contact you at ${guestContact.trim()}.`);
+      setGuestTarget(null);
+    } catch (e) {
+      setGuestError(e.message);
+    } finally {
+      setGuestLoading(false);
+    }
+  };
+
   const visibleMatches = tab === 0 ? matches : matches.filter(m => m.status === TABS[tab]);
 
   // Can create a match only if they own at least one team
-  const canCreateMatch = ownedTeams.length > 0;
+  const canCreateMatch = user && ownedTeams.length > 0;
 
   const isMobile = useMediaQuery('(max-width:600px)');
 
@@ -231,6 +259,14 @@ export default function MatchListPage() {
       >
         {TABS.map((label, i) => <Tab key={label} label={label} id={`tab-${i}`} />)}
       </Tabs>
+
+      {/* Guest banner */}
+      {!user && (
+        <Alert severity="info" sx={{ mb: 2 }}
+          action={<Button color="inherit" size="small" onClick={() => navigate('/login')}>Sign In</Button>}>
+          You're browsing as a guest. Sign in to join teams, track payments, and see private matches.
+        </Alert>
+      )}
 
       <ErrorAlert message={error} onRetry={load} />
 
@@ -257,6 +293,7 @@ export default function MatchListPage() {
                   match={match}
                   joined={joinedIds.has(match.id)}
                   canEdit={canEdit}
+                  isGuest={!user}
                   isMemberOfTeam={isMemberOfTeam}
                   actionLoading={actionLoading === match.id}
                   onView={() => navigate(`/matches/${match.id}`)}
@@ -266,6 +303,7 @@ export default function MatchListPage() {
                   onDelete={() => setDeleteTarget(match)}
                   onComplete={() => handleComplete(match.id)}
                   onGoToTeam={() => navigate('/teams')}
+                  onGuestJoin={() => { setGuestTarget(match); setGuestName(''); setGuestContact(''); setGuestError(''); }}
                 />
               </Grid>
             );
@@ -384,14 +422,45 @@ export default function MatchListPage() {
         </DialogActions>
       </Dialog>
 
-      <Snackbar open={!!toast} autoHideDuration={3000} onClose={() => setToast('')}
+      {/* ── Guest Join Dialog ────────────────────────────────────────────────── */}
+      <Dialog open={!!guestTarget} onClose={() => setGuestTarget(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>Join as Guest</DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
+          <Typography variant="body2" color="text.secondary">
+            You're joining <b>{guestTarget?.groundName}</b> without an account.
+            Provide your details so the organiser can reach you.
+          </Typography>
+          <TextField
+            label="Your Name" required fullWidth
+            value={guestName}
+            onChange={e => { setGuestName(e.target.value); setGuestError(''); }}
+            placeholder="e.g. John Doe"
+          />
+          <TextField
+            label="Phone or Email" required fullWidth
+            value={guestContact}
+            onChange={e => { setGuestContact(e.target.value); setGuestError(''); }}
+            placeholder="e.g. +91 98765 43210 or john@email.com"
+            helperText="The match organiser will use this to contact you"
+          />
+          {guestError && <Alert severity="error">{guestError}</Alert>}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setGuestTarget(null)} color="inherit">Cancel</Button>
+          <Button variant="contained" onClick={handleGuestJoin} disabled={guestLoading}>
+            {guestLoading ? 'Joining…' : 'Join Match'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar open={!!toast} autoHideDuration={5000} onClose={() => setToast('')}
         message={toast} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }} />
     </Layout>
   );
 }
 
 // ─── Match Card ───────────────────────────────────────────────────────────────
-function MatchCard({ match, joined, canEdit, isMemberOfTeam, actionLoading, onView, onJoin, onLeave, onEdit, onDelete, onComplete, onGoToTeam }) {
+function MatchCard({ match, joined, canEdit, isGuest, isMemberOfTeam, actionLoading, onView, onJoin, onLeave, onEdit, onDelete, onComplete, onGoToTeam, onGuestJoin }) {
   const isUpcoming = match.status === 'UPCOMING';
   const isPrivate  = match.visibility === 'PRIVATE';
 
@@ -467,7 +536,12 @@ function MatchCard({ match, joined, canEdit, isMemberOfTeam, actionLoading, onVi
         )}
 
         {isUpcoming && (
-          joined ? (
+          isGuest ? (
+            <Button size="small" variant="contained" color="success"
+              onClick={onGuestJoin} sx={{ flex: 1 }}>
+              Join as Guest
+            </Button>
+          ) : joined ? (
             <Button size="small" variant="contained" color="error"
               onClick={onLeave} disabled={actionLoading} sx={{ flex: 1 }}>
               {actionLoading ? 'Leaving…' : 'Leave'}

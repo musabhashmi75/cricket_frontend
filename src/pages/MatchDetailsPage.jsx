@@ -70,22 +70,24 @@ export default function MatchDetailsPage() {
     setLoading(true);
     setError('');
     try {
-      const [matchData, playersData, paymentsData] = await Promise.all([
-        matchApi.getOne(id),
-        matchApi.getPlayers(id),
-        paymentApi.getByMatch(id),
-      ]);
+      // Guests have no auth token — skip the payment API call (requires auth)
+      const requests = [matchApi.getOne(id), matchApi.getPlayers(id)];
+      if (user) requests.push(paymentApi.getByMatch(id));
+
+      const [matchData, playersData, paymentsData] = await Promise.all(requests);
       setMatch(matchData);
       setPlayers(playersData);
-      const payMap = {};
-      paymentsData.forEach(p => { payMap[p.userId] = p; });
-      setPayments(payMap);
+      if (paymentsData) {
+        const payMap = {};
+        paymentsData.forEach(p => { payMap[p.userId] = p; });
+        setPayments(payMap);
+      }
     } catch (e) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, user]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -93,13 +95,15 @@ export default function MatchDetailsPage() {
     setPayments(prev => ({ ...prev, [payment.userId]: payment }));
   };
 
-  const amIPlayer   = players.some(p => p.userId === user.userId);
-  const myPayment   = payments[user.userId];
+  const amIPlayer   = user && players.some(p => p.userId === user.userId);
+  const myPayment   = user ? payments[user.userId] : null;
   const paidCount   = Object.values(payments).filter(p => p.status === 'PAID').length;
   const unpaidCount = players.length - paidCount;
 
-  // Sort: unpaid first (no payment or PENDING), then PAID
+  // Sort: guests last, then unpaid registered, then paid
   const sortedPlayers = [...players].sort((a, b) => {
+    if (a.guest && !b.guest) return 1;
+    if (!a.guest && b.guest) return -1;
     const aPaid = payments[a.userId]?.status === 'PAID';
     const bPaid = payments[b.userId]?.status === 'PAID';
     return Number(aPaid) - Number(bPaid);
@@ -223,31 +227,38 @@ export default function MatchDetailsPage() {
                         const isPaid  = payment?.status === 'PAID';
                         return (
                           <TableRow
-                            key={player.userId}
+                            key={player.id}
                             sx={{
-                              bgcolor: isPaid
-                                ? 'success.50'
-                                : 'error.50',
+                              bgcolor: player.guest
+                                ? 'grey.50'
+                                : isPaid ? 'success.50' : 'error.50',
                               '&:hover': { filter: 'brightness(0.97)' },
                             }}
                           >
                             <TableCell>
                               <Typography variant="body2" fontWeight={500}>
                                 {player.userName}
-                                {player.userId === user.userId && (
+                                {player.guest && (
+                                  <Chip label="Guest" size="small" color="default" variant="outlined"
+                                    sx={{ ml: 1, height: 18, fontSize: 10 }} />
+                                )}
+                                {!player.guest && user && player.userId === user.userId && (
                                   <Chip label="You" size="small" sx={{ ml: 1, height: 18, fontSize: 10 }} />
                                 )}
                               </Typography>
                               <Typography variant="caption" color="text.secondary"
                                 sx={{ display: { xs: 'none', sm: 'block' } }}>
-                                {player.userEmail}
+                                {player.guest ? player.guestContact : player.userEmail}
                               </Typography>
                             </TableCell>
                             <TableCell>
-                              <StatusChip type="payment" value={payment?.status ?? null} />
+                              {player.guest
+                                ? <Chip label="—" size="small" variant="outlined" />
+                                : <StatusChip type="payment" value={payment?.status ?? null} />
+                              }
                             </TableCell>
                             <TableCell align="right">
-                              {payment?.fileUrl ? (
+                              {!player.guest && payment?.fileUrl ? (
                                 <Tooltip title="View proof">
                                   <IconButton
                                     size="small"

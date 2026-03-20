@@ -29,8 +29,8 @@ function AppRoutes() {
       <Route path="/login"    element={<PublicRoute><LoginPage /></PublicRoute>} />
       <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
 
-      <Route path="/matches"    element={<PrivateRoute><MatchListPage /></PrivateRoute>} />
-      <Route path="/matches/:id" element={<PrivateRoute><MatchDetailsPage /></PrivateRoute>} />
+      <Route path="/matches"     element={<MatchListPage />} />
+      <Route path="/matches/:id" element={<MatchDetailsPage />} />
       <Route path="/teams"      element={<PrivateRoute><TeamsPage /></PrivateRoute>} />
       <Route path="/dashboard"  element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
 
