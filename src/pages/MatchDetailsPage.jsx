@@ -31,7 +31,6 @@ import ImageIcon from '@mui/icons-material/Image';
 import { useParams, useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 
-import Chip from '@mui/material/Chip';
 import LockIcon from '@mui/icons-material/Lock';
 import PublicIcon from '@mui/icons-material/Public';
 import GroupsIcon from '@mui/icons-material/Groups';
