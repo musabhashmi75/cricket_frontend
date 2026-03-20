@@ -19,6 +19,9 @@ import TextField from '@mui/material/TextField';
 import Alert from '@mui/material/Alert';
 import Snackbar from '@mui/material/Snackbar';
 import MenuItem from '@mui/material/MenuItem';
+import Chip from '@mui/material/Chip';
+import LockIcon from '@mui/icons-material/Lock';
+import PublicIcon from '@mui/icons-material/Public';
 import PeopleIcon from '@mui/icons-material/People';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
@@ -27,6 +30,7 @@ import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import GroupsIcon from '@mui/icons-material/Groups';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 
@@ -35,12 +39,16 @@ import StatusChip from '../components/common/StatusChip';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorAlert from '../components/common/ErrorAlert';
 import { matchApi } from '../api/matchApi';
+import { teamApi } from '../api/teamApi';
 import { dashboardApi } from '../api/dashboardApi';
 import { useAuth } from '../context/AuthContext';
 
 const TABS = ['ALL', 'UPCOMING', 'COMPLETED', 'CANCELLED'];
 
-const EMPTY_FORM = { groundName: '', dateTime: '', totalAmount: '', description: '', status: 'UPCOMING' };
+const EMPTY_FORM = {
+  groundName: '', groundLocation: '', dateTime: '', totalAmount: '',
+  description: '', status: 'UPCOMING', teamId: '', visibility: 'PUBLIC',
+};
 
 export default function MatchListPage() {
   const { user, isAdmin } = useAuth();
@@ -48,20 +56,20 @@ export default function MatchListPage() {
 
   const [matches,       setMatches]       = useState([]);
   const [joinedIds,     setJoinedIds]     = useState(new Set());
+  const [memberTeamIds, setMemberTeamIds] = useState(new Set());  // teams user belongs to
+  const [ownedTeams,    setOwnedTeams]    = useState([]);          // teams user owns
   const [tab,           setTab]           = useState(0);
   const [loading,       setLoading]       = useState(true);
   const [error,         setError]         = useState('');
   const [actionLoading, setActionLoading] = useState(null);
   const [toast,         setToast]         = useState('');
 
-  // Create / Edit dialog
   const [dialogOpen,    setDialogOpen]    = useState(false);
-  const [editTarget,    setEditTarget]    = useState(null);   // null = create, object = edit
+  const [editTarget,    setEditTarget]    = useState(null);
   const [form,          setForm]          = useState(EMPTY_FORM);
   const [formLoading,   setFormLoading]   = useState(false);
   const [formError,     setFormError]     = useState('');
 
-  // Delete confirm dialog
   const [deleteTarget,  setDeleteTarget]  = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
@@ -69,28 +77,31 @@ export default function MatchListPage() {
     setLoading(true);
     setError('');
     try {
-      const [allMatches, dashboard] = await Promise.all([
+      const [allMatches, dashboard, teams] = await Promise.all([
         matchApi.getAll(),
         dashboardApi.player(user.userId),
+        teamApi.getAll(),
       ]);
       setMatches(allMatches);
       setJoinedIds(new Set(dashboard.matches.map(m => m.matchId)));
+      setMemberTeamIds(new Set(teams.filter(t => t.member).map(t => t.id)));
+      setOwnedTeams(teams.filter(t => t.owner));
     } catch (e) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
-  }, [isAdmin, user.userId]);
+  }, [user.userId]);
 
   useEffect(() => { load(); }, [load]);
 
-  // ── Join / Leave ──────────────────────────────────────────────────────────
   const handleJoin = async (matchId) => {
     setActionLoading(matchId);
     try {
       await matchApi.join(matchId, user.userId);
       setJoinedIds(prev => new Set([...prev, matchId]));
-    } catch (e) { setError(e.message); }
+      setToast('Joined match!');
+    } catch (e) { setToast(e.message); }
     finally { setActionLoading(null); }
   };
 
@@ -99,11 +110,11 @@ export default function MatchListPage() {
     try {
       await matchApi.leave(matchId, user.userId);
       setJoinedIds(prev => { const s = new Set(prev); s.delete(matchId); return s; });
+      setToast('Left match.');
     } catch (e) { setError(e.message); }
     finally { setActionLoading(null); }
   };
 
-  // ── Create / Edit dialog ──────────────────────────────────────────────────
   const openCreate = () => {
     setEditTarget(null);
     setForm(EMPTY_FORM);
@@ -114,11 +125,14 @@ export default function MatchListPage() {
   const openEdit = (match) => {
     setEditTarget(match);
     setForm({
-      groundName:  match.groundName,
-      dateTime:    dayjs(match.dateTime).format('YYYY-MM-DDTHH:mm'),
-      totalAmount: match.totalAmount,
-      description: match.description || '',
-      status:      match.status,
+      groundName:     match.groundName,
+      groundLocation: match.groundLocation || '',
+      dateTime:       dayjs(match.dateTime).format('YYYY-MM-DDTHH:mm'),
+      totalAmount:    match.totalAmount,
+      description:    match.description || '',
+      status:         match.status,
+      teamId:         match.teamId || '',
+      visibility:     match.visibility || 'PUBLIC',
     });
     setFormError('');
     setDialogOpen(true);
@@ -131,15 +145,23 @@ export default function MatchListPage() {
       setFormError('Ground name, date/time and total amount are required.');
       return;
     }
+    // Non-admins must select a team
+    if (!isAdmin && !editTarget && !form.teamId) {
+      setFormError('Please select a team for this match.');
+      return;
+    }
     setFormLoading(true);
     setFormError('');
     try {
       const payload = {
-        groundName:  form.groundName.trim(),
-        dateTime:    form.dateTime,        // ISO string, backend accepts it
-        totalAmount: parseFloat(form.totalAmount),
-        description: form.description.trim() || null,
-        status:      form.status,
+        groundName:     form.groundName.trim(),
+        groundLocation: form.groundLocation.trim() || null,
+        dateTime:       form.dateTime,
+        totalAmount:    parseFloat(form.totalAmount),
+        description:    form.description.trim() || null,
+        status:         form.status,
+        visibility:     form.visibility,
+        teamId:         form.teamId ? parseInt(form.teamId) : null,
       };
 
       if (editTarget) {
@@ -159,7 +181,6 @@ export default function MatchListPage() {
     }
   };
 
-  // ── Delete ────────────────────────────────────────────────────────────────
   const handleDelete = async () => {
     setDeleteLoading(true);
     try {
@@ -175,7 +196,6 @@ export default function MatchListPage() {
     }
   };
 
-  // ── Complete ──────────────────────────────────────────────────────────────
   const handleComplete = async (matchId) => {
     setActionLoading(matchId);
     try {
@@ -188,12 +208,14 @@ export default function MatchListPage() {
 
   const visibleMatches = tab === 0 ? matches : matches.filter(m => m.status === TABS[tab]);
 
+  // Can the current user create matches?
+  const canCreateMatch = isAdmin || ownedTeams.length > 0;
+
   return (
     <Layout>
-      {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4">Matches</Typography>
-        {isAdmin && (
+        {canCreateMatch && (
           <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
             Add Match
           </Button>
@@ -214,7 +236,7 @@ export default function MatchListPage() {
       ) : visibleMatches.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 8 }}>
           <Typography color="text.secondary">No matches found.</Typography>
-          {isAdmin && (
+          {canCreateMatch && (
             <Button variant="outlined" startIcon={<AddIcon />} sx={{ mt: 2 }} onClick={openCreate}>
               Create the first match
             </Button>
@@ -222,26 +244,33 @@ export default function MatchListPage() {
         </Box>
       ) : (
         <Grid container spacing={3}>
-          {visibleMatches.map(match => (
-            <Grid item xs={12} sm={6} md={4} key={match.id}>
-              <MatchCard
-                match={match}
-                joined={joinedIds.has(match.id)}
-                isAdmin={isAdmin}
-                actionLoading={actionLoading === match.id}
-                onView={() => navigate(`/matches/${match.id}`)}
-                onJoin={() => handleJoin(match.id)}
-                onLeave={() => handleLeave(match.id)}
-                onEdit={() => openEdit(match)}
-                onDelete={() => setDeleteTarget(match)}
-                onComplete={() => handleComplete(match.id)}
-              />
-            </Grid>
-          ))}
+          {visibleMatches.map(match => {
+            const isMatchOwner = match.createdByUserId === user.userId;
+            const canEdit = isAdmin || isMatchOwner;
+            const isMemberOfTeam = !match.teamId || memberTeamIds.has(match.teamId);
+            return (
+              <Grid item xs={12} sm={6} md={4} key={match.id}>
+                <MatchCard
+                  match={match}
+                  joined={joinedIds.has(match.id)}
+                  canEdit={canEdit}
+                  isMemberOfTeam={isMemberOfTeam}
+                  actionLoading={actionLoading === match.id}
+                  onView={() => navigate(`/matches/${match.id}`)}
+                  onJoin={() => handleJoin(match.id)}
+                  onLeave={() => handleLeave(match.id)}
+                  onEdit={() => openEdit(match)}
+                  onDelete={() => setDeleteTarget(match)}
+                  onComplete={() => handleComplete(match.id)}
+                  onGoToTeam={() => navigate('/teams')}
+                />
+              </Grid>
+            );
+          })}
         </Grid>
       )}
 
-      {/* ── Create / Edit Dialog ───────────────────────────────────────────── */}
+      {/* ── Create / Edit Dialog ─────────────────────────────────────────────── */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>{editTarget ? 'Edit Match' : 'Add New Match'}</DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 2 }}>
@@ -251,6 +280,13 @@ export default function MatchListPage() {
             onChange={setField('groundName')}
             required fullWidth
             placeholder="e.g. National Cricket Ground"
+          />
+          <TextField
+            label="Ground Location"
+            value={form.groundLocation}
+            onChange={setField('groundLocation')}
+            fullWidth
+            placeholder="e.g. 123 Main Street, City"
           />
           <TextField
             label="Date & Time"
@@ -275,6 +311,31 @@ export default function MatchListPage() {
             fullWidth multiline rows={2}
             placeholder="Optional notes about the match"
           />
+          {/* Team selector — only on create, only for owned teams */}
+          {!editTarget && (isAdmin || ownedTeams.length > 0) && (
+            <TextField
+              select label="Team"
+              value={form.teamId}
+              onChange={setField('teamId')}
+              fullWidth
+              helperText={isAdmin ? "Optional — leave blank for an open match" : "Required — select your team"}
+            >
+              {isAdmin && <MenuItem value="">No team (open match)</MenuItem>}
+              {ownedTeams.map(t => (
+                <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>
+              ))}
+            </TextField>
+          )}
+          <TextField
+            select label="Visibility"
+            value={form.visibility}
+            onChange={setField('visibility')}
+            fullWidth
+            helperText="Public = everyone can see. Private = team members only."
+          >
+            <MenuItem value="PUBLIC">Public</MenuItem>
+            <MenuItem value="PRIVATE">Private</MenuItem>
+          </TextField>
           {editTarget && (
             <TextField
               select label="Status"
@@ -296,7 +357,7 @@ export default function MatchListPage() {
         </DialogActions>
       </Dialog>
 
-      {/* ── Delete Confirm Dialog ──────────────────────────────────────────── */}
+      {/* ── Delete Confirm Dialog ────────────────────────────────────────────── */}
       <Dialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)} maxWidth="xs" fullWidth>
         <DialogTitle>Delete Match?</DialogTitle>
         <DialogContent>
@@ -318,20 +379,30 @@ export default function MatchListPage() {
   );
 }
 
-// ─── Match Card ──────────────────────────────────────────────────────────────
-function MatchCard({ match, joined, isAdmin, actionLoading, onView, onJoin, onLeave, onEdit, onDelete, onComplete }) {
+// ─── Match Card ───────────────────────────────────────────────────────────────
+function MatchCard({ match, joined, canEdit, isMemberOfTeam, actionLoading, onView, onJoin, onLeave, onEdit, onDelete, onComplete, onGoToTeam }) {
   const isUpcoming = match.status === 'UPCOMING';
+  const isPrivate  = match.visibility === 'PRIVATE';
 
   return (
     <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <CardContent sx={{ flexGrow: 1 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
-          <StatusChip type="match" value={match.status} />
+          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+            <StatusChip type="match" value={match.status} />
+            <Chip
+              size="small"
+              icon={isPrivate ? <LockIcon sx={{ fontSize: '14px !important' }} /> : <PublicIcon sx={{ fontSize: '14px !important' }} />}
+              label={isPrivate ? 'Private' : 'Public'}
+              color={isPrivate ? 'default' : 'info'}
+              variant="outlined"
+            />
+          </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
             {joined && (
               <Tooltip title="You joined"><PeopleIcon fontSize="small" color="success" /></Tooltip>
             )}
-            {isAdmin && isUpcoming && (
+            {canEdit && isUpcoming && (
               <>
                 <Tooltip title="Edit">
                   <IconButton size="small" onClick={onEdit}><EditIcon fontSize="small" /></IconButton>
@@ -346,13 +417,19 @@ function MatchCard({ match, joined, isAdmin, actionLoading, onView, onJoin, onLe
 
         <Typography variant="h6" gutterBottom noWrap>{match.groundName}</Typography>
 
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, mt: 2 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, mt: 1 }}>
           <InfoRow icon={<EventIcon />} text={dayjs(match.dateTime).format('D MMM YYYY, h:mm A')} />
+          {match.groundLocation && (
+            <InfoRow icon={<LocationOnIcon />} text={match.groundLocation} />
+          )}
           <InfoRow icon={<AttachMoneyIcon />} text={`Total: ₹${Number(match.totalAmount).toLocaleString()}`} />
           {match.perPersonAmount > 0 && (
             <InfoRow icon={<AttachMoneyIcon />} text={`Per Person: ₹${Number(match.perPersonAmount).toLocaleString()}`} />
           )}
-          {match.description && (
+          {match.teamName && (
+            <InfoRow icon={<GroupsIcon />} text={match.teamName} />
+          )}
+          {match.description && !match.groundLocation && !match.teamName && (
             <InfoRow icon={<LocationOnIcon />} text={match.description} />
           )}
         </Box>
@@ -365,8 +442,7 @@ function MatchCard({ match, joined, isAdmin, actionLoading, onView, onJoin, onLe
           View Details
         </Button>
 
-        {/* Admin: mark as complete */}
-        {isAdmin && isUpcoming && (
+        {canEdit && isUpcoming && (
           <Tooltip title="Mark as completed and calculate per-person amount">
             <Button
               size="small" variant="contained" color="success"
@@ -379,18 +455,24 @@ function MatchCard({ match, joined, isAdmin, actionLoading, onView, onJoin, onLe
           </Tooltip>
         )}
 
-        {/* Join / leave for everyone */}
         {isUpcoming && (
           joined ? (
             <Button size="small" variant="contained" color="error"
               onClick={onLeave} disabled={actionLoading} sx={{ flex: 1 }}>
               {actionLoading ? 'Leaving…' : 'Leave'}
             </Button>
-          ) : (
+          ) : isMemberOfTeam ? (
             <Button size="small" variant="contained" color="success"
               onClick={onJoin} disabled={actionLoading} sx={{ flex: 1 }}>
               {actionLoading ? 'Joining…' : 'Join'}
             </Button>
+          ) : (
+            <Tooltip title="You must join the team first">
+              <Button size="small" variant="outlined" color="warning"
+                onClick={onGoToTeam} sx={{ flex: 1 }}>
+                Join Team
+              </Button>
+            </Tooltip>
           )
         )}
       </CardActions>

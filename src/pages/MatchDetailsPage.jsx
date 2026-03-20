@@ -31,6 +31,10 @@ import ImageIcon from '@mui/icons-material/Image';
 import { useParams, useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 
+import Chip from '@mui/material/Chip';
+import LockIcon from '@mui/icons-material/Lock';
+import PublicIcon from '@mui/icons-material/Public';
+import GroupsIcon from '@mui/icons-material/Groups';
 import Layout from '../components/layout/Layout';
 import StatusChip from '../components/common/StatusChip';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -113,6 +117,13 @@ export default function MatchDetailsPage() {
         <IconButton onClick={() => navigate('/matches')}><ArrowBackIcon /></IconButton>
         <Typography variant="h4" sx={{ flexGrow: 1 }}>Match Details</Typography>
         <StatusChip type="match" value={match.status} size="medium" />
+        <Chip
+          size="small"
+          icon={match.visibility === 'PRIVATE' ? <LockIcon sx={{ fontSize: '14px !important' }} /> : <PublicIcon sx={{ fontSize: '14px !important' }} />}
+          label={match.visibility === 'PRIVATE' ? 'Private' : 'Public'}
+          color={match.visibility === 'PRIVATE' ? 'default' : 'info'}
+          variant="outlined"
+        />
       </Box>
 
       <Grid container spacing={3}>
@@ -121,6 +132,17 @@ export default function MatchDetailsPage() {
           <Card>
             <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <Typography variant="h5">{match.groundName}</Typography>
+              {match.groundLocation && (
+                <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  📍 {match.groundLocation}
+                </Typography>
+              )}
+              {match.teamName && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <GroupsIcon fontSize="small" color="action" />
+                  <Typography variant="body2" color="text.secondary">{match.teamName}</Typography>
+                </Box>
+              )}
               <Divider />
               <InfoGrid items={[
                 { label: 'Date & Time',   value: dayjs(match.dateTime).format('D MMM YYYY, h:mm A') },

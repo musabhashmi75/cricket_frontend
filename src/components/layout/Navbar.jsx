@@ -73,6 +73,7 @@ export default function Navbar() {
 
   const navItems = [
     { label: 'Matches',   path: '/matches' },
+    { label: 'Teams',     path: '/teams' },
     { label: 'Dashboard', path: '/dashboard' },
     ...(isAdmin ? [{ label: 'Users', path: '/admin/users', icon: <PeopleIcon sx={{ fontSize: 16 }} /> }] : []),
   ];

@@ -9,6 +9,7 @@ import MatchListPage    from './pages/MatchListPage';
 import MatchDetailsPage from './pages/MatchDetailsPage';
 import DashboardPage    from './pages/DashboardPage';
 import AdminUsersPage   from './pages/AdminUsersPage';
+import TeamsPage        from './pages/TeamsPage';
 
 function PrivateRoute({ children, adminOnly = false }) {
   const { user, isAdmin } = useAuth();
@@ -30,6 +31,7 @@ function AppRoutes() {
 
       <Route path="/matches"    element={<PrivateRoute><MatchListPage /></PrivateRoute>} />
       <Route path="/matches/:id" element={<PrivateRoute><MatchDetailsPage /></PrivateRoute>} />
+      <Route path="/teams"      element={<PrivateRoute><TeamsPage /></PrivateRoute>} />
       <Route path="/dashboard"  element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
 
       <Route
