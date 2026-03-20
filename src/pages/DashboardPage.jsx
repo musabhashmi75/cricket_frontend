@@ -18,6 +18,7 @@ import Divider from '@mui/material/Divider';
 import Tooltip from '@mui/material/Tooltip';
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
+import Chip from '@mui/material/Chip';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SportsCricketIcon from '@mui/icons-material/SportsCricket';
 import PendingActionsIcon from '@mui/icons-material/PendingActions';
@@ -60,10 +61,10 @@ export default function DashboardPage() {
   return (
     <Layout>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">
+        <Typography variant="h5" fontWeight={700}>
           {isAdmin ? 'Admin Dashboard' : 'My Dashboard'}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>
           {isAdmin ? 'Full overview' : `Welcome, ${user.userName}`}
         </Typography>
       </Box>
@@ -73,28 +74,25 @@ export default function DashboardPage() {
       {loading ? (
         <LoadingSpinner message="Loading dashboard…" />
       ) : data ? (
-        isAdmin
-          ? <AdminView data={data} />
-          : <PlayerView data={data} />
+        isAdmin ? <AdminView data={data} /> : <PlayerView data={data} />
       ) : null}
     </Layout>
   );
 }
 
-// ─── Admin View ─────────────────────────────────────────────────────────────
+// ─── Admin View ───────────────────────────────────────────────────────────────
 function AdminView({ data }) {
   const navigate = useNavigate();
   const statCards = [
-    { label: 'Total Matches',     value: data.totalMatches,   icon: <SportsCricketIcon />,        color: 'primary' },
-    { label: 'Upcoming',          value: data.upcomingCount,  icon: <EventNoteIcon />,             color: 'info' },
-    { label: 'Completed',         value: data.completedCount, icon: <CheckCircleOutlineIcon />,    color: 'success' },
-    { label: 'Cancelled',         value: data.cancelledCount, icon: <PendingActionsIcon />,        color: 'error' },
+    { label: 'Total',     value: data.totalMatches,   icon: <SportsCricketIcon />,     color: 'primary' },
+    { label: 'Upcoming',  value: data.upcomingCount,  icon: <EventNoteIcon />,          color: 'info' },
+    { label: 'Completed', value: data.completedCount, icon: <CheckCircleOutlineIcon />, color: 'success' },
+    { label: 'Cancelled', value: data.cancelledCount, icon: <PendingActionsIcon />,     color: 'error' },
   ];
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      {/* Stat cards */}
-      <Grid container spacing={2}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      <Grid container spacing={1.5}>
         {statCards.map(({ label, value, icon, color }) => (
           <Grid item xs={6} md={3} key={label}>
             <StatCard label={label} value={value} icon={icon} color={color} />
@@ -102,33 +100,30 @@ function AdminView({ data }) {
         ))}
       </Grid>
 
-      {/* Per-match summaries */}
       <Box>
-        <Typography variant="h5" gutterBottom>Match Breakdown</Typography>
+        <Typography variant="h6" gutterBottom>Match Breakdown</Typography>
         {data.matches.length === 0 ? (
           <Typography color="text.secondary">No matches yet.</Typography>
         ) : (
           data.matches.map(match => (
             <Accordion key={match.matchId} sx={{ mb: 1, borderRadius: '10px !important', '&:before': { display: 'none' } }}>
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%', pr: 2, flexWrap: 'wrap' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%', pr: 1, flexWrap: 'wrap' }}>
                   <StatusChip type="match" value={match.status} />
-                  <Typography fontWeight={600} sx={{ flex: 1 }}>{match.groundName}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {dayjs(match.dateTime).format('D MMM YYYY')}
-                  </Typography>
-
-                  {/* Compact counts */}
-                  <Box sx={{ display: 'flex', gap: 1.5, flexShrink: 0 }}>
-                    <CountBadge label="Players"  value={match.playerCount}      color="default" />
-                    <CountBadge label="Paid"     value={match.paidCount}        color="success.main" />
-                    <CountBadge label="Unpaid"   value={match.unpaidPlayerCount} color="error.main" />
+                  <Typography fontWeight={600} sx={{ flex: 1, minWidth: 0 }} noWrap>{match.groundName}</Typography>
+                  <Box sx={{ display: 'flex', gap: 1, flexShrink: 0, alignItems: 'center' }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>
+                      {dayjs(match.dateTime).format('D MMM YYYY')}
+                    </Typography>
+                    <CountBadge label="Players" value={match.playerCount}        color="default" />
+                    <CountBadge label="Paid"    value={match.paidCount}          color="success.main" />
+                    <CountBadge label="Unpaid"  value={match.unpaidPlayerCount}  color="error.main" />
                   </Box>
                 </Box>
               </AccordionSummary>
 
-              <AccordionDetails>
-                <Grid container spacing={2} sx={{ mb: 2 }}>
+              <AccordionDetails sx={{ px: { xs: 1, sm: 2 } }}>
+                <Grid container spacing={1.5} sx={{ mb: 2 }}>
                   <Grid item xs={6} sm={3}>
                     <MetricBox label="Total Amount" value={`₹${Number(match.totalAmount).toLocaleString()}`} />
                   </Grid>
@@ -140,25 +135,19 @@ function AdminView({ data }) {
                   </Grid>
                   <Grid item xs={6} sm={3}>
                     <MetricBox
-                      label="Total Pending"
+                      label="Pending"
                       value={match.totalPendingAmount > 0 ? `₹${Number(match.totalPendingAmount).toLocaleString()}` : '—'}
                       highlight={match.totalPendingAmount > 0}
                     />
                   </Grid>
                   <Grid item xs={6} sm={3}>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      fullWidth
-                      sx={{ height: '100%' }}
-                      onClick={() => navigate(`/matches/${match.matchId}`)}
-                    >
+                    <Button variant="outlined" size="small" fullWidth sx={{ height: '100%', minHeight: 52 }}
+                      onClick={() => navigate(`/matches/${match.matchId}`)}>
                       View Details
                     </Button>
                   </Grid>
                 </Grid>
 
-                {/* Player payment table */}
                 {match.players?.length > 0 && (
                   <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
                     <Table size="small">
@@ -170,10 +159,7 @@ function AdminView({ data }) {
                       </TableHead>
                       <TableBody>
                         {match.players.map(p => (
-                          <TableRow
-                            key={p.userId}
-                            sx={{ bgcolor: p.highlighted ? 'error.50' : 'success.50' }}
-                          >
+                          <TableRow key={p.userId} sx={{ bgcolor: p.highlighted ? 'error.50' : 'success.50' }}>
                             <TableCell>
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <Avatar sx={{ width: 28, height: 28, fontSize: 13, bgcolor: p.highlighted ? 'error.main' : 'success.main' }}>
@@ -181,7 +167,10 @@ function AdminView({ data }) {
                                 </Avatar>
                                 <Box>
                                   <Typography variant="body2" fontWeight={500}>{p.userName}</Typography>
-                                  <Typography variant="caption" color="text.secondary">{p.userEmail}</Typography>
+                                  <Typography variant="caption" color="text.secondary"
+                                    sx={{ display: { xs: 'none', sm: 'block' } }}>
+                                    {p.userEmail}
+                                  </Typography>
                                 </Box>
                               </Box>
                             </TableCell>
@@ -203,21 +192,20 @@ function AdminView({ data }) {
   );
 }
 
-// ─── Player View ─────────────────────────────────────────────────────────────
+// ─── Player View ──────────────────────────────────────────────────────────────
 function PlayerView({ data }) {
   const navigate = useNavigate();
 
   const statCards = [
-    { label: 'Matches Joined', value: data.totalMatchesJoined, icon: <SportsCricketIcon />,     color: 'primary' },
-    { label: 'Paid',           value: data.paidCount,          icon: <CheckCircleOutlineIcon />, color: 'success' },
-    { label: 'Pending',        value: data.pendingCount,        icon: <PendingActionsIcon />,    color: 'error' },
-    { label: 'Not Uploaded',   value: data.notUploadedCount,   icon: <MonetizationOnIcon />,    color: 'warning' },
+    { label: 'Joined',      value: data.totalMatchesJoined, icon: <SportsCricketIcon />,     color: 'primary' },
+    { label: 'Paid',        value: data.paidCount,          icon: <CheckCircleOutlineIcon />, color: 'success' },
+    { label: 'Pending',     value: data.pendingCount,       icon: <PendingActionsIcon />,     color: 'error' },
+    { label: 'Not Uploaded',value: data.notUploadedCount,   icon: <MonetizationOnIcon />,     color: 'warning' },
   ];
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      {/* Stat cards */}
-      <Grid container spacing={2}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      <Grid container spacing={1.5}>
         {statCards.map(({ label, value, icon, color }) => (
           <Grid item xs={6} md={3} key={label}>
             <StatCard label={label} value={value} icon={icon} color={color} />
@@ -225,80 +213,63 @@ function PlayerView({ data }) {
         ))}
       </Grid>
 
-      {/* Match list */}
       <Box>
-        <Typography variant="h5" gutterBottom>My Matches</Typography>
+        <Typography variant="h6" gutterBottom>My Matches</Typography>
         {data.matches.length === 0 ? (
           <Typography color="text.secondary">You haven't joined any matches yet.</Typography>
         ) : (
-          <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
-            <Table>
-              <TableHead>
-                <TableRow sx={{ bgcolor: 'grey.50' }}>
-                  <TableCell><b>Match</b></TableCell>
-                  <TableCell><b>Date</b></TableCell>
-                  <TableCell><b>Status</b></TableCell>
-                  <TableCell align="right"><b>My Share</b></TableCell>
-                  <TableCell><b>Payment</b></TableCell>
-                  <TableCell />
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {data.matches.map(m => (
-                  <TableRow
-                    key={m.matchId}
-                    sx={{
-                      bgcolor: m.highlighted ? 'error.50' : 'inherit',
-                      cursor: 'pointer',
-                      '&:hover': { filter: 'brightness(0.97)' },
-                    }}
-                  >
-                    <TableCell>
-                      <Typography fontWeight={500}>{m.groundName}</Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" color="text.secondary">
-                        {dayjs(m.dateTime).format('D MMM YYYY')}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            {data.matches.map(m => (
+              <Card
+                key={m.matchId}
+                variant="outlined"
+                sx={{ bgcolor: m.highlighted ? 'error.50' : 'inherit', cursor: 'pointer',
+                      '&:hover': { filter: 'brightness(0.97)' } }}
+                onClick={() => navigate(`/matches/${m.matchId}`)}
+              >
+                <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography fontWeight={600} noWrap>{m.groundName}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {dayjs(m.dateTime).format('D MMM YYYY, h:mm A')}
                       </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <StatusChip type="match" value={m.matchStatus} />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Typography variant="body2" fontWeight={600}>
-                        {m.contributionAmount > 0
-                          ? `₹${Number(m.contributionAmount).toLocaleString()}`
-                          : '—'}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <StatusChip type="payment" value={m.paymentStatus} />
-                    </TableCell>
-                    <TableCell>
-                      <Button size="small" variant="outlined" onClick={() => navigate(`/matches/${m.matchId}`)}>
-                        View
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                    </Box>
+                    <Button size="small" variant="outlined" sx={{ flexShrink: 0 }}
+                      onClick={e => { e.stopPropagation(); navigate(`/matches/${m.matchId}`); }}>
+                      View
+                    </Button>
+                  </Box>
+
+                  <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <StatusChip type="match" value={m.matchStatus} />
+                    <StatusChip type="payment" value={m.paymentStatus} />
+                    {m.contributionAmount > 0 && (
+                      <Chip
+                        label={`My share: ₹${Number(m.contributionAmount).toLocaleString()}`}
+                        size="small" variant="outlined" color="primary"
+                      />
+                    )}
+                  </Box>
+                </CardContent>
+              </Card>
+            ))}
+          </Box>
         )}
       </Box>
     </Box>
   );
 }
 
-// ─── Shared sub-components ───────────────────────────────────────────────────
+// ─── Shared sub-components ────────────────────────────────────────────────────
 function StatCard({ label, value, icon, color }) {
   return (
     <Card>
-      <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <Avatar sx={{ bgcolor: `${color}.main`, width: 44, height: 44 }}>{icon}</Avatar>
+      <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
+        <Avatar sx={{ bgcolor: `${color}.main`, width: { xs: 36, sm: 44 }, height: { xs: 36, sm: 44 } }}>{icon}</Avatar>
         <Box>
-          <Typography variant="h5" fontWeight={700}>{value}</Typography>
-          <Typography variant="caption" color="text.secondary">{label}</Typography>
+          <Typography variant="h5" fontWeight={700} sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>{value}</Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', sm: '0.75rem' } }}>{label}</Typography>
         </Box>
       </CardContent>
     </Card>
@@ -310,7 +281,7 @@ function CountBadge({ label, value, color }) {
     <Tooltip title={label}>
       <Box sx={{ textAlign: 'center' }}>
         <Typography variant="body2" fontWeight={700} sx={{ color }}>{value}</Typography>
-        <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10 }}>{label}</Typography>
+        <Typography variant="caption" color="text.secondary" sx={{ fontSize: 9 }}>{label}</Typography>
       </Box>
     </Tooltip>
   );
@@ -320,7 +291,7 @@ function MetricBox({ label, value, highlight }) {
   return (
     <Box sx={{ bgcolor: highlight ? 'error.50' : 'grey.50', borderRadius: 2, p: 1.5 }}>
       <Typography variant="caption" color="text.secondary">{label}</Typography>
-      <Typography variant="body1" fontWeight={600} color={highlight ? 'error.main' : 'text.primary'}>
+      <Typography variant="body2" fontWeight={600} color={highlight ? 'error.main' : 'text.primary'}>
         {value}
       </Typography>
     </Box>

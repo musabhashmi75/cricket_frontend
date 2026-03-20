@@ -211,8 +211,8 @@ export default function TeamsPage() {
     <Layout>
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Teams</Typography>
-        <Button variant="contained" startIcon={<AddIcon />}
+        <Typography variant="h5" fontWeight={700}>Teams</Typography>
+        <Button variant="contained" startIcon={<AddIcon />} size="small"
           onClick={() => { setCreateForm({ name: '', description: '' }); setCreateError(''); setCreateOpen(true); }}>
           Create Team
         </Button>
@@ -234,7 +234,7 @@ export default function TeamsPage() {
           </Typography>
         </Box>
       ) : (
-        <Grid container spacing={3}>
+        <Grid container spacing={{ xs: 2, sm: 3 }}>
           {visibleTeams.map(team => (
             <Grid item xs={12} sm={6} md={4} key={team.id}>
               <TeamCard
@@ -356,12 +356,12 @@ export default function TeamsPage() {
           ) : members.length === 0 ? (
             <Typography sx={{ p: 2, textAlign: 'center' }} color="text.secondary">No members.</Typography>
           ) : (
-            <TableContainer component={Paper} variant="outlined">
+            <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
               <Table size="small">
                 <TableHead>
                   <TableRow sx={{ bgcolor: 'grey.50' }}>
                     <TableCell><b>Name</b></TableCell>
-                    <TableCell><b>Email</b></TableCell>
+                    <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}><b>Email</b></TableCell>
                     <TableCell><b>Joined</b></TableCell>
                   </TableRow>
                 </TableHead>
@@ -369,16 +369,22 @@ export default function TeamsPage() {
                   {members.map(m => (
                     <TableRow key={m.id}>
                       <TableCell>
-                        {m.userName}
-                        {m.userId === membersTeam?.createdByUserId && (
-                          <Chip label="Owner" size="small" color="warning" sx={{ ml: 1, height: 18, fontSize: 10 }} />
-                        )}
-                        {m.userId === user.userId && (
-                          <Chip label="You" size="small" sx={{ ml: 1, height: 18, fontSize: 10 }} />
-                        )}
+                        <Typography variant="body2">{m.userName}</Typography>
+                        <Typography variant="caption" color="text.secondary"
+                          sx={{ display: { xs: 'block', sm: 'none' } }}>
+                          {m.userEmail}
+                        </Typography>
+                        <Box sx={{ display: 'flex', gap: 0.5, mt: 0.25 }}>
+                          {m.userId === membersTeam?.createdByUserId && (
+                            <Chip label="Owner" size="small" color="warning" sx={{ height: 16, fontSize: 10 }} />
+                          )}
+                          {m.userId === user.userId && (
+                            <Chip label="You" size="small" sx={{ height: 16, fontSize: 10 }} />
+                          )}
+                        </Box>
                       </TableCell>
-                      <TableCell>{m.userEmail}</TableCell>
-                      <TableCell>{dayjs(m.joinedAt).format('D MMM YYYY')}</TableCell>
+                      <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>{m.userEmail}</TableCell>
+                      <TableCell sx={{ whiteSpace: 'nowrap' }}>{dayjs(m.joinedAt).format('D MMM YY')}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

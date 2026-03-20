@@ -119,8 +119,9 @@ export default function AdminUsersPage() {
   return (
     <Layout>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">User Management</Typography>
-        <Button variant="contained" startIcon={<PersonAddIcon />} onClick={() => setCreateOpen(true)}>
+        <Typography variant="h5" fontWeight={700}>User Management</Typography>
+        <Button variant="contained" startIcon={<PersonAddIcon />} onClick={() => setCreateOpen(true)}
+          size="small">
           New User
         </Button>
       </Box>
@@ -130,13 +131,13 @@ export default function AdminUsersPage() {
       {loading ? <LoadingSpinner message="Loading users…" /> : (
         <Card>
           <CardContent>
-            <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
-              <Table>
+            <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, overflowX: 'auto' }}>
+              <Table size="small">
                 <TableHead>
                   <TableRow sx={{ bgcolor: 'grey.50' }}>
                     <TableCell><b>User</b></TableCell>
-                    <TableCell><b>Role</b></TableCell>
-                    <TableCell><b>Password Status</b></TableCell>
+                    <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}><b>Role</b></TableCell>
+                    <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}><b>Password Status</b></TableCell>
                     <TableCell align="right"><b>Actions</b></TableCell>
                   </TableRow>
                 </TableHead>
@@ -148,17 +149,31 @@ export default function AdminUsersPage() {
                     >
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                          <Avatar sx={{ width: 36, height: 36, bgcolor: user.role === 'ADMIN' ? 'warning.main' : 'primary.main' }}>
+                          <Avatar sx={{ width: 32, height: 32, fontSize: 14, bgcolor: user.role === 'ADMIN' ? 'warning.main' : 'primary.main' }}>
                             {user.name?.[0]?.toUpperCase()}
                           </Avatar>
                           <Box>
                             <Typography variant="body2" fontWeight={500}>{user.name}</Typography>
-                            <Typography variant="caption" color="text.secondary">{user.email}</Typography>
+                            <Typography variant="caption" color="text.secondary"
+                              sx={{ display: { xs: 'none', sm: 'block' } }}>
+                              {user.email}
+                            </Typography>
+                            {/* Role chip inline on xs */}
+                            <Box sx={{ display: { xs: 'flex', sm: 'none' }, gap: 0.5, mt: 0.25, alignItems: 'center' }}>
+                              <Chip label={user.role} size="small"
+                                color={user.role === 'ADMIN' ? 'warning' : 'default'}
+                                variant="filled" sx={{ fontWeight: 700, height: 16, fontSize: 10 }} />
+                              {user.passwordResetRequired && (
+                                <Tooltip title="Password reset required">
+                                  <WarningAmberIcon sx={{ fontSize: 14, color: 'warning.main' }} />
+                                </Tooltip>
+                              )}
+                            </Box>
                           </Box>
                         </Box>
                       </TableCell>
 
-                      <TableCell>
+                      <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
                         <Chip
                           label={user.role}
                           size="small"
@@ -168,7 +183,7 @@ export default function AdminUsersPage() {
                         />
                       </TableCell>
 
-                      <TableCell>
+                      <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                         {user.passwordResetRequired ? (
                           <Chip
                             icon={<WarningAmberIcon />}
@@ -188,10 +203,11 @@ export default function AdminUsersPage() {
                             size="small"
                             variant="outlined"
                             color="error"
-                            startIcon={<LockResetIcon />}
                             onClick={() => openReset(user)}
+                            sx={{ minWidth: { xs: 36, sm: 'auto' }, px: { xs: 1, sm: 1.5 } }}
                           >
-                            Reset Password
+                            <LockResetIcon fontSize="small" sx={{ mr: { xs: 0, sm: 0.5 } }} />
+                            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Reset</Box>
                           </Button>
                         </Tooltip>
                       </TableCell>

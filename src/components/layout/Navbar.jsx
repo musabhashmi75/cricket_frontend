@@ -9,6 +9,10 @@ import IconButton from '@mui/material/IconButton';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Divider from '@mui/material/Divider';
+import Drawer from '@mui/material/Drawer';
+import List from '@mui/material/List';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemText from '@mui/material/ListItemText';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -22,6 +26,7 @@ import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import LogoutIcon from '@mui/icons-material/Logout';
 import LockIcon from '@mui/icons-material/Lock';
 import PeopleIcon from '@mui/icons-material/People';
+import MenuIcon from '@mui/icons-material/Menu';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
@@ -39,18 +44,22 @@ export default function Navbar() {
   const openMenu  = (e) => setAnchorEl(e.currentTarget);
   const closeMenu = ()  => setAnchorEl(null);
 
+  // Mobile drawer
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
   // Change password dialog
-  const [pwOpen,   setPwOpen]   = useState(false);
-  const [current,  setCurrent]  = useState('');
-  const [newPw,    setNewPw]    = useState('');
-  const [showC,    setShowC]    = useState(false);
-  const [showN,    setShowN]    = useState(false);
+  const [pwOpen,    setPwOpen]    = useState(false);
+  const [current,   setCurrent]   = useState('');
+  const [newPw,     setNewPw]     = useState('');
+  const [showC,     setShowC]     = useState(false);
+  const [showN,     setShowN]     = useState(false);
   const [pwLoading, setPwLoading] = useState(false);
-  const [pwError,  setPwError]  = useState('');
-  const [pwDone,   setPwDone]   = useState(false);
+  const [pwError,   setPwError]   = useState('');
+  const [pwDone,    setPwDone]    = useState(false);
 
   const openChangePw = () => {
     closeMenu();
+    setDrawerOpen(false);
     setCurrent(''); setNewPw(''); setPwError(''); setPwDone(false);
     setPwOpen(true);
   };
@@ -69,38 +78,53 @@ export default function Navbar() {
     }
   };
 
-  const handleLogout = () => { closeMenu(); logout(); navigate('/login'); };
+  const handleLogout = () => { closeMenu(); setDrawerOpen(false); logout(); navigate('/login'); };
 
   const navItems = [
     { label: 'Matches',   path: '/matches' },
     { label: 'Teams',     path: '/teams' },
     { label: 'Dashboard', path: '/dashboard' },
-    ...(isAdmin ? [{ label: 'Users', path: '/admin/users', icon: <PeopleIcon sx={{ fontSize: 16 }} /> }] : []),
+    ...(isAdmin ? [{ label: 'Users', path: '/admin/users' }] : []),
   ];
+
+  const isActive = (path) => location.pathname.startsWith(path);
 
   return (
     <>
       <AppBar position="sticky" elevation={0} sx={{ borderBottom: '1px solid rgba(255,255,255,0.15)' }}>
-        <Toolbar sx={{ gap: 1 }}>
-          <SportsCricketIcon sx={{ mr: 1 }} />
+        <Toolbar sx={{ gap: 1, minHeight: { xs: 56, sm: 64 } }}>
+
+          {/* Mobile hamburger */}
+          <IconButton
+            color="inherit"
+            edge="start"
+            onClick={() => setDrawerOpen(true)}
+            sx={{ display: { xs: 'flex', md: 'none' }, mr: 0.5 }}
+          >
+            <MenuIcon />
+          </IconButton>
+
+          {/* Logo */}
+          <SportsCricketIcon sx={{ mr: 0.5, display: { xs: 'none', sm: 'block' } }} />
           <Typography
             variant="h6"
-            sx={{ flexGrow: 0, cursor: 'pointer', mr: 3, fontWeight: 700 }}
+            sx={{ flexGrow: { xs: 1, md: 0 }, cursor: 'pointer', mr: { md: 3 }, fontWeight: 700,
+                  fontSize: { xs: '1rem', sm: '1.25rem' } }}
             onClick={() => navigate('/matches')}
           >
             Cricket Manager
           </Typography>
 
-          <Box sx={{ display: 'flex', gap: 0.5, flexGrow: 1 }}>
+          {/* Desktop nav links */}
+          <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 0.5, flexGrow: 1 }}>
             {navItems.map(({ label, path }) => (
               <Button
                 key={path}
                 color="inherit"
                 onClick={() => navigate(path)}
                 sx={{
-                  fontWeight: location.pathname.startsWith(path) ? 700 : 400,
-                  borderBottom: location.pathname.startsWith(path)
-                    ? '2px solid white' : '2px solid transparent',
+                  fontWeight: isActive(path) ? 700 : 400,
+                  borderBottom: isActive(path) ? '2px solid white' : '2px solid transparent',
                   borderRadius: 0,
                   pb: '6px',
                 }}
@@ -110,33 +134,25 @@ export default function Navbar() {
             ))}
           </Box>
 
+          {/* Right side: role chip + user icon */}
           {user && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              {/* Password reset warning badge */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 'auto' }}>
               {user.passwordResetRequired && (
                 <Tooltip title="Please change your password">
-                  <Chip
-                    icon={<WarningAmberIcon />}
-                    label="Change password"
-                    color="warning"
-                    size="small"
-                    onClick={openChangePw}
-                    sx={{ cursor: 'pointer' }}
-                  />
+                  <IconButton color="inherit" size="small" onClick={openChangePw}>
+                    <WarningAmberIcon color="warning" fontSize="small" />
+                  </IconButton>
                 </Tooltip>
               )}
-
               <Chip
                 label={user.role}
                 size="small"
                 sx={{
                   bgcolor: user.role === 'ADMIN' ? 'warning.main' : 'success.main',
-                  color: 'white',
-                  fontWeight: 700,
+                  color: 'white', fontWeight: 700,
                   display: { xs: 'none', sm: 'flex' },
                 }}
               />
-
               <Tooltip title={user.userName}>
                 <IconButton color="inherit" onClick={openMenu} size="small">
                   <AccountCircleIcon />
@@ -163,6 +179,55 @@ export default function Navbar() {
           )}
         </Toolbar>
       </AppBar>
+
+      {/* ── Mobile Drawer ───────────────────────────────────────────────────── */}
+      <Drawer anchor="left" open={drawerOpen} onClose={() => setDrawerOpen(false)}
+        PaperProps={{ sx: { width: 240 } }}
+      >
+        <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1, bgcolor: 'primary.main', color: 'white' }}>
+          <SportsCricketIcon />
+          <Typography variant="h6" fontWeight={700}>Cricket Manager</Typography>
+        </Box>
+        <Divider />
+
+        {user && (
+          <Box sx={{ px: 2, py: 1.5 }}>
+            <Typography variant="body2" fontWeight={600}>{user.userName}</Typography>
+            <Typography variant="caption" color="text.secondary">{user.email}</Typography>
+            <Chip
+              label={user.role} size="small"
+              sx={{ mt: 0.5, display: 'block', width: 'fit-content',
+                bgcolor: user.role === 'ADMIN' ? 'warning.main' : 'success.main',
+                color: 'white', fontWeight: 700 }}
+            />
+          </Box>
+        )}
+        <Divider />
+
+        <List dense>
+          {navItems.map(({ label, path }) => (
+            <ListItemButton
+              key={path}
+              selected={isActive(path)}
+              onClick={() => { navigate(path); setDrawerOpen(false); }}
+              sx={{ borderRadius: 1, mx: 1, my: 0.25 }}
+            >
+              <ListItemText primary={label} primaryTypographyProps={{ fontWeight: isActive(path) ? 700 : 400 }} />
+            </ListItemButton>
+          ))}
+        </List>
+        <Divider />
+        <List dense>
+          <ListItemButton onClick={openChangePw} sx={{ borderRadius: 1, mx: 1, my: 0.25 }}>
+            <LockIcon fontSize="small" sx={{ mr: 1.5, color: 'text.secondary' }} />
+            <ListItemText primary="Change Password" />
+          </ListItemButton>
+          <ListItemButton onClick={handleLogout} sx={{ borderRadius: 1, mx: 1, my: 0.25, color: 'error.main' }}>
+            <LogoutIcon fontSize="small" sx={{ mr: 1.5 }} />
+            <ListItemText primary="Sign Out" primaryTypographyProps={{ color: 'error.main' }} />
+          </ListItemButton>
+        </List>
+      </Drawer>
 
       {/* ── Change Password Dialog ─────────────────────────────────────────── */}
       <Dialog open={pwOpen} onClose={() => setPwOpen(false)} maxWidth="xs" fullWidth>

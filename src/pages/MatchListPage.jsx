@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import Box from '@mui/material/Box';
 import Grid from '@mui/material/Grid';
 import Card from '@mui/material/Card';
@@ -30,6 +31,7 @@ import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CloseIcon from '@mui/icons-material/Close';
 import GroupsIcon from '@mui/icons-material/Groups';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
@@ -210,12 +212,14 @@ export default function MatchListPage() {
   // Can create a match only if they own at least one team
   const canCreateMatch = ownedTeams.length > 0;
 
+  const isMobile = useMediaQuery('(max-width:600px)');
+
   return (
     <Layout>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Matches</Typography>
+        <Typography variant="h5" fontWeight={700}>Matches</Typography>
         {canCreateMatch && (
-          <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate} size="small">
             Add Match
           </Button>
         )}
@@ -242,7 +246,7 @@ export default function MatchListPage() {
           )}
         </Box>
       ) : (
-        <Grid container spacing={3}>
+        <Grid container spacing={{ xs: 2, sm: 3 }}>
           {visibleMatches.map(match => {
             const isMatchOwner = match.createdByUserId === user.userId;
             const canEdit = isAdmin || isMatchOwner;
@@ -270,8 +274,15 @@ export default function MatchListPage() {
       )}
 
       {/* ── Create / Edit Dialog ─────────────────────────────────────────────── */}
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{editTarget ? 'Edit Match' : 'Add New Match'}</DialogTitle>
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth fullScreen={isMobile}>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          {editTarget ? 'Edit Match' : 'Add New Match'}
+          {isMobile && (
+            <IconButton size="small" onClick={() => setDialogOpen(false)}>
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          )}
+        </DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 2 }}>
           <TextField
             label="Ground Name"

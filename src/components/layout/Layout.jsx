@@ -7,7 +7,7 @@ export default function Layout({ children, maxWidth = 'lg' }) {
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       <Navbar />
-      <Container maxWidth={maxWidth} sx={{ py: 4 }}>
+      <Container maxWidth={maxWidth} sx={{ py: { xs: 2, sm: 3, md: 4 }, px: { xs: 1.5, sm: 3 } }}>
         {children}
       </Container>
     </Box>

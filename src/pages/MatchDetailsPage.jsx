@@ -112,10 +112,12 @@ export default function MatchDetailsPage() {
   return (
     <Layout>
       {/* Back button + title */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-        <IconButton onClick={() => navigate('/matches')}><ArrowBackIcon /></IconButton>
-        <Typography variant="h4" sx={{ flexGrow: 1 }}>Match Details</Typography>
-        <StatusChip type="match" value={match.status} size="medium" />
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3, flexWrap: 'wrap' }}>
+        <IconButton onClick={() => navigate('/matches')} size="small"><ArrowBackIcon /></IconButton>
+        <Typography variant="h5" fontWeight={700} sx={{ flexGrow: 1, fontSize: { xs: '1.1rem', sm: '1.5rem' } }}>
+          Match Details
+        </Typography>
+        <StatusChip type="match" value={match.status} />
         <Chip
           size="small"
           icon={match.visibility === 'PRIVATE' ? <LockIcon sx={{ fontSize: '14px !important' }} /> : <PublicIcon sx={{ fontSize: '14px !important' }} />}
@@ -162,7 +164,7 @@ export default function MatchDetailsPage() {
               {!isAdmin && amIPlayer && (
                 <>
                   <Divider />
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
                     <Box>
                       <Typography variant="body2" color="text.secondary">My Payment</Typography>
                       <StatusChip type="payment" value={myPayment?.status ?? null} />
@@ -172,6 +174,7 @@ export default function MatchDetailsPage() {
                       startIcon={<CloudUploadIcon />}
                       onClick={() => setUploadOpen(true)}
                       color={myPayment?.status === 'PAID' ? 'success' : 'primary'}
+                      size="small"
                     >
                       {myPayment?.status === 'PAID' ? 'Re-upload' : 'Upload Proof'}
                     </Button>
@@ -205,7 +208,7 @@ export default function MatchDetailsPage() {
                   No players have joined yet.
                 </Typography>
               ) : (
-                <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
+                <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, overflowX: 'auto' }}>
                   <Table size="small">
                     <TableHead>
                       <TableRow sx={{ bgcolor: 'grey.50' }}>
@@ -235,7 +238,8 @@ export default function MatchDetailsPage() {
                                   <Chip label="You" size="small" sx={{ ml: 1, height: 18, fontSize: 10 }} />
                                 )}
                               </Typography>
-                              <Typography variant="caption" color="text.secondary">
+                              <Typography variant="caption" color="text.secondary"
+                                sx={{ display: { xs: 'none', sm: 'block' } }}>
                                 {player.userEmail}
                               </Typography>
                             </TableCell>
