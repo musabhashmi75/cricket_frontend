@@ -1,9 +1,10 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import Box from '@mui/material/Box';
 import Grid from '@mui/material/Grid';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import CardActions from '@mui/material/CardActions';
+import CardMedia from '@mui/material/CardMedia';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
@@ -24,10 +25,13 @@ import Paper from '@mui/material/Paper';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import Divider from '@mui/material/Divider';
+import LinearProgress from '@mui/material/LinearProgress';
 import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
 import PeopleIcon from '@mui/icons-material/People';
 import StarIcon from '@mui/icons-material/Star';
 import CloseIcon from '@mui/icons-material/Close';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import IconButton from '@mui/material/IconButton';
 import dayjs from 'dayjs';
 
@@ -37,21 +41,36 @@ import ErrorAlert from '../components/common/ErrorAlert';
 import { teamApi } from '../api/teamApi';
 import { useAuth } from '../context/AuthContext';
 
+// Converts absolute backend URL to relative path for Vercel proxy
+function toProxiedUrl(url) {
+  if (!url) return null;
+  try { return new URL(url).pathname; } catch { return url; }
+}
+
 export default function TeamsPage() {
   const { user } = useAuth();
 
   const [teams,      setTeams]      = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState('');
-  const [tab,        setTab]        = useState(0);   // 0=All, 1=My Teams
+  const [tab,        setTab]        = useState(0);
   const [toast,      setToast]      = useState('');
   const [actionId,   setActionId]   = useState(null);
 
-  // Create team dialog
+  // Create dialog
   const [createOpen,  setCreateOpen]  = useState(false);
-  const [form,        setForm]        = useState({ name: '', description: '' });
-  const [formLoading, setFormLoading] = useState(false);
-  const [formError,   setFormError]   = useState('');
+  const [createForm,  setCreateForm]  = useState({ name: '', description: '' });
+  const [createLoading, setCreateLoading] = useState(false);
+  const [createError,   setCreateError]   = useState('');
+
+  // Edit dialog
+  const [editTarget,  setEditTarget]  = useState(null);   // team being edited
+  const [editForm,    setEditForm]    = useState({ name: '', description: '' });
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError,   setEditError]   = useState('');
+  const [bannerFile,  setBannerFile]  = useState(null);
+  const [bannerLoading, setBannerLoading] = useState(false);
+  const bannerRef = useRef(null);
 
   // Members dialog
   const [membersTeam,    setMembersTeam]    = useState(null);
@@ -72,25 +91,77 @@ export default function TeamsPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  // ── Create ────────────────────────────────────────────────────────────────
   const handleCreate = async () => {
-    if (!form.name.trim()) { setFormError('Team name is required.'); return; }
-    setFormLoading(true); setFormError('');
+    if (!createForm.name.trim()) { setCreateError('Team name is required.'); return; }
+    setCreateLoading(true); setCreateError('');
     try {
       const created = await teamApi.create({
-        name: form.name.trim(),
-        description: form.description.trim() || null,
+        name: createForm.name.trim(),
+        description: createForm.description.trim() || null,
       });
       setTeams(prev => [created, ...prev]);
       setToast('Team created!');
       setCreateOpen(false);
-      setForm({ name: '', description: '' });
+      setCreateForm({ name: '', description: '' });
     } catch (e) {
-      setFormError(e.message);
+      setCreateError(e.message);
     } finally {
-      setFormLoading(false);
+      setCreateLoading(false);
     }
   };
 
+  // ── Edit ──────────────────────────────────────────────────────────────────
+  const openEdit = (team) => {
+    setEditTarget(team);
+    setEditForm({ name: team.name, description: team.description || '' });
+    setEditError('');
+    setBannerFile(null);
+  };
+
+  const handleEditSave = async () => {
+    if (!editForm.name.trim()) { setEditError('Team name is required.'); return; }
+    setEditLoading(true); setEditError('');
+    try {
+      let updated = await teamApi.update(editTarget.id, {
+        name: editForm.name.trim(),
+        description: editForm.description.trim() || null,
+      });
+      // Upload banner if a new file was selected
+      if (bannerFile) {
+        setBannerLoading(true);
+        updated = await teamApi.uploadBanner(editTarget.id, bannerFile);
+        setBannerLoading(false);
+      }
+      setTeams(prev => prev.map(t => t.id === updated.id ? updated : t));
+      setToast('Team updated!');
+      setEditTarget(null);
+      setBannerFile(null);
+    } catch (e) {
+      setEditError(e.message);
+      setBannerLoading(false);
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleBannerChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowed.includes(file.type)) {
+      setEditError('Only JPG, PNG, GIF or WebP images are accepted for the banner.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setEditError('Banner image must not exceed 5 MB.');
+      return;
+    }
+    setEditError('');
+    setBannerFile(file);
+  };
+
+  // ── Join / Leave ──────────────────────────────────────────────────────────
   const handleJoin = async (teamId) => {
     setActionId(teamId);
     try {
@@ -121,6 +192,7 @@ export default function TeamsPage() {
     }
   };
 
+  // ── Members ───────────────────────────────────────────────────────────────
   const openMembers = async (team) => {
     setMembersTeam(team);
     setMembersLoading(true);
@@ -140,7 +212,8 @@ export default function TeamsPage() {
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4">Teams</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setForm({ name: '', description: '' }); setFormError(''); setCreateOpen(true); }}>
+        <Button variant="contained" startIcon={<AddIcon />}
+          onClick={() => { setCreateForm({ name: '', description: '' }); setCreateError(''); setCreateOpen(true); }}>
           Create Team
         </Button>
       </Box>
@@ -171,6 +244,7 @@ export default function TeamsPage() {
                 onJoin={() => handleJoin(team.id)}
                 onLeave={() => handleLeave(team.id)}
                 onViewMembers={() => openMembers(team)}
+                onEdit={() => openEdit(team)}
               />
             </Grid>
           ))}
@@ -182,25 +256,90 @@ export default function TeamsPage() {
         <DialogTitle>Create Team</DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 2 }}>
           <TextField
-            label="Team Name"
-            value={form.name}
-            onChange={e => { setForm(p => ({ ...p, name: e.target.value })); setFormError(''); }}
-            required fullWidth
+            label="Team Name" required fullWidth
+            value={createForm.name}
+            onChange={e => { setCreateForm(p => ({ ...p, name: e.target.value })); setCreateError(''); }}
             placeholder="e.g. Weekend Warriors"
           />
           <TextField
-            label="Description"
-            value={form.description}
-            onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-            fullWidth multiline rows={2}
+            label="Description" fullWidth multiline rows={2}
+            value={createForm.description}
+            onChange={e => setCreateForm(p => ({ ...p, description: e.target.value }))}
             placeholder="Optional description"
           />
-          {formError && <Alert severity="error">{formError}</Alert>}
+          {createError && <Alert severity="error">{createError}</Alert>}
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setCreateOpen(false)} color="inherit">Cancel</Button>
-          <Button variant="contained" onClick={handleCreate} disabled={formLoading}>
-            {formLoading ? 'Creating…' : 'Create'}
+          <Button variant="contained" onClick={handleCreate} disabled={createLoading}>
+            {createLoading ? 'Creating…' : 'Create'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ── Edit Team Dialog ─────────────────────────────────────────────────── */}
+      <Dialog open={!!editTarget} onClose={() => setEditTarget(null)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          Edit Team
+          <IconButton size="small" onClick={() => setEditTarget(null)}><CloseIcon /></IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 2 }}>
+          {(editLoading || bannerLoading) && <LinearProgress />}
+
+          <TextField
+            label="Team Name" required fullWidth
+            value={editForm.name}
+            onChange={e => { setEditForm(p => ({ ...p, name: e.target.value })); setEditError(''); }}
+          />
+          <TextField
+            label="Description" fullWidth multiline rows={2}
+            value={editForm.description}
+            onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))}
+          />
+
+          {/* Banner upload */}
+          <Box>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              Team Banner / Display Picture
+            </Typography>
+            {/* Preview: new file takes priority, else existing banner */}
+            {(bannerFile || editTarget?.bannerUrl) && (
+              <Box
+                component="img"
+                src={bannerFile ? URL.createObjectURL(bannerFile) : toProxiedUrl(editTarget.bannerUrl)}
+                alt="Banner preview"
+                sx={{ width: '100%', height: 140, objectFit: 'cover', borderRadius: 1, mb: 1 }}
+              />
+            )}
+            <input
+              ref={bannerRef}
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              style={{ display: 'none' }}
+              onChange={handleBannerChange}
+            />
+            <Button
+              variant="outlined"
+              startIcon={<CloudUploadIcon />}
+              onClick={() => bannerRef.current?.click()}
+              size="small"
+            >
+              {bannerFile ? bannerFile.name : editTarget?.bannerUrl ? 'Replace Banner' : 'Upload Banner'}
+            </Button>
+            {bannerFile && (
+              <Button size="small" color="inherit" sx={{ ml: 1 }}
+                onClick={() => { setBannerFile(null); if (bannerRef.current) bannerRef.current.value = ''; }}>
+                Remove
+              </Button>
+            )}
+          </Box>
+
+          {editError && <Alert severity="error">{editError}</Alert>}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setEditTarget(null)} color="inherit">Cancel</Button>
+          <Button variant="contained" onClick={handleEditSave} disabled={editLoading || bannerLoading}>
+            {editLoading || bannerLoading ? 'Saving…' : 'Save Changes'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -258,23 +397,41 @@ export default function TeamsPage() {
   );
 }
 
-function TeamCard({ team, currentUserId, actionLoading, onJoin, onLeave, onViewMembers }) {
-  const isOwner = team.owner;
+// ─── Team Card ────────────────────────────────────────────────────────────────
+function TeamCard({ team, actionLoading, onJoin, onLeave, onViewMembers, onEdit }) {
+  const isOwner   = team.owner;
+  const bannerUrl = toProxiedUrl(team.bannerUrl);
 
   return (
     <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {/* Banner */}
+      {bannerUrl ? (
+        <CardMedia component="img" height="120" image={bannerUrl} alt={`${team.name} banner`} />
+      ) : (
+        <Box sx={{ height: 120, bgcolor: 'primary.light', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Typography variant="h4" sx={{ color: 'white', fontWeight: 700, opacity: 0.6 }}>
+            {team.name.charAt(0).toUpperCase()}
+          </Typography>
+        </Box>
+      )}
+
       <CardContent sx={{ flexGrow: 1 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5 }}>
           <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
             {isOwner && <Chip icon={<StarIcon />} label="Owner" size="small" color="warning" />}
             {team.member && !isOwner && <Chip label="Member" size="small" color="success" />}
           </Box>
+          {isOwner && (
+            <IconButton size="small" onClick={onEdit}>
+              <EditIcon fontSize="small" />
+            </IconButton>
+          )}
         </Box>
 
         <Typography variant="h6" gutterBottom>{team.name}</Typography>
 
         {team.description && (
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
             {team.description}
           </Typography>
         )}
@@ -284,7 +441,7 @@ function TeamCard({ team, currentUserId, actionLoading, onJoin, onLeave, onViewM
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
           <PeopleIcon fontSize="small" color="action" />
           <Typography variant="body2" color="text.secondary">
-            {team.memberCount} {team.memberCount === 1 ? 'member' : 'members'} · Created by {team.createdByName}
+            {team.memberCount} {team.memberCount === 1 ? 'member' : 'members'} · {team.createdByName}
           </Typography>
         </Box>
       </CardContent>

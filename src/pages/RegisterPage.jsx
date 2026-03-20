@@ -17,7 +17,7 @@ import { authApi } from '../api/authApi';
 export default function RegisterPage() {
   const navigate = useNavigate();
 
-  const [form, setForm]       = useState({ name: '', email: '', password: '' });
+  const [form, setForm]       = useState({ name: '', email: '', phoneNumber: '', password: '' });
   const [showPw, setShowPw]   = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState('');
@@ -60,8 +60,12 @@ export default function RegisterPage() {
           </Box>
 
           <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-            <TextField label="Full Name" value={form.name}     onChange={set('name')}     required fullWidth />
-            <TextField label="Email"     value={form.email}    onChange={set('email')}    required fullWidth type="email" />
+            <TextField label="Full Name"    value={form.name}        onChange={set('name')}        required fullWidth />
+            <TextField label="Email"        value={form.email}       onChange={set('email')}       required fullWidth type="email" />
+            <TextField label="Phone Number" value={form.phoneNumber} onChange={set('phoneNumber')} required fullWidth type="tel"
+              placeholder="e.g. +923001234567"
+              helperText="7–15 digits, optional leading +"
+            />
             <TextField
               label="Password"
               value={form.password}

@@ -141,12 +141,11 @@ export default function MatchListPage() {
   const setField = (field) => (e) => { setForm(p => ({ ...p, [field]: e.target.value })); setFormError(''); };
 
   const handleSave = async () => {
-    if (!form.groundName.trim() || !form.dateTime || !form.totalAmount) {
-      setFormError('Ground name, date/time and total amount are required.');
+    if (!form.groundName.trim() || !form.dateTime) {
+      setFormError('Ground name and date/time are required.');
       return;
     }
-    // Non-admins must select a team
-    if (!isAdmin && !editTarget && !form.teamId) {
+    if (!editTarget && !form.teamId) {
       setFormError('Please select a team for this match.');
       return;
     }
@@ -157,7 +156,7 @@ export default function MatchListPage() {
         groundName:     form.groundName.trim(),
         groundLocation: form.groundLocation.trim() || null,
         dateTime:       form.dateTime,
-        totalAmount:    parseFloat(form.totalAmount),
+        totalAmount:    form.totalAmount ? parseFloat(form.totalAmount) : null,
         description:    form.description.trim() || null,
         status:         form.status,
         visibility:     form.visibility,
@@ -208,8 +207,8 @@ export default function MatchListPage() {
 
   const visibleMatches = tab === 0 ? matches : matches.filter(m => m.status === TABS[tab]);
 
-  // Can the current user create matches?
-  const canCreateMatch = isAdmin || ownedTeams.length > 0;
+  // Can create a match only if they own at least one team
+  const canCreateMatch = ownedTeams.length > 0;
 
   return (
     <Layout>
@@ -301,8 +300,9 @@ export default function MatchListPage() {
             type="number"
             value={form.totalAmount}
             onChange={setField('totalAmount')}
-            required fullWidth
-            inputProps={{ min: 1 }}
+            fullWidth
+            inputProps={{ min: 0 }}
+            placeholder="Optional"
           />
           <TextField
             label="Description"
@@ -311,16 +311,16 @@ export default function MatchListPage() {
             fullWidth multiline rows={2}
             placeholder="Optional notes about the match"
           />
-          {/* Team selector — only on create, only for owned teams */}
-          {!editTarget && (isAdmin || ownedTeams.length > 0) && (
+          {/* Team selector — required on create */}
+          {!editTarget && (
             <TextField
-              select label="Team"
+              select label="Team" required
               value={form.teamId}
               onChange={setField('teamId')}
               fullWidth
-              helperText={isAdmin ? "Optional — leave blank for an open match" : "Required — select your team"}
+              helperText="Select the team this match belongs to"
             >
-              {isAdmin && <MenuItem value="">No team (open match)</MenuItem>}
+              <MenuItem value="" disabled>Select a team</MenuItem>
               {ownedTeams.map(t => (
                 <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>
               ))}
