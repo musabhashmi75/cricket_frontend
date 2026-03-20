@@ -132,6 +132,16 @@ export default function LoginPage() {
             >
               Create an Account
             </Button>
+
+            <Button
+              variant="text"
+              fullWidth
+              color="inherit"
+              onClick={() => navigate('/matches')}
+              sx={{ color: 'text.secondary' }}
+            >
+              Continue as Guest
+            </Button>
           </Box>
         </CardContent>
       </Card>
