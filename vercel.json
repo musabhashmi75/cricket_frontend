@@ -1,20 +1,16 @@
 {
-  "routes": [
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "http://103.127.29.90:8081/api/$1"
+      "source": "/api/(.*)",
+      "destination": "http://103.127.29.90:8081/api/$1"
     },
     {
-      "src": "/uploads/(.*)",
-      "dest": "http://103.127.29.90:8081/uploads/$1"
+      "source": "/uploads/(.*)",
+      "destination": "http://103.127.29.90:8081/uploads/$1"
     },
     {
-      "src": "^/assets/(.*)",
-      "dest": "/assets/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }

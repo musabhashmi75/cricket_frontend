@@ -284,7 +284,7 @@ export default function MatchListPage() {
       ) : (
         <Grid container spacing={{ xs: 2, sm: 3 }}>
           {visibleMatches.map(match => {
-            const isMatchOwner = match.createdByUserId === user.userId;
+            const isMatchOwner = user && match.createdByUserId === user.userId;
             const canEdit = isAdmin || isMatchOwner;
             const isMemberOfTeam = !match.teamId || memberTeamIds.has(match.teamId);
             return (
