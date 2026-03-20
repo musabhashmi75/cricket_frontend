@@ -71,10 +71,10 @@ export default function MatchListPage() {
     try {
       const [allMatches, dashboard] = await Promise.all([
         matchApi.getAll(),
-        !isAdmin ? dashboardApi.player(user.userId) : Promise.resolve(null),
+        dashboardApi.player(user.userId),
       ]);
       setMatches(allMatches);
-      if (dashboard) setJoinedIds(new Set(dashboard.matches.map(m => m.matchId)));
+      setJoinedIds(new Set(dashboard.matches.map(m => m.matchId)));
     } catch (e) {
       setError(e.message);
     } finally {
@@ -261,7 +261,7 @@ export default function MatchListPage() {
             InputLabelProps={{ shrink: true }}
           />
           <TextField
-            label="Total Amount (PKR)"
+            label="Total Amount (₹)"
             type="number"
             value={form.totalAmount}
             onChange={setField('totalAmount')}
@@ -348,9 +348,9 @@ function MatchCard({ match, joined, isAdmin, actionLoading, onView, onJoin, onLe
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, mt: 2 }}>
           <InfoRow icon={<EventIcon />} text={dayjs(match.dateTime).format('D MMM YYYY, h:mm A')} />
-          <InfoRow icon={<AttachMoneyIcon />} text={`Total: PKR ${Number(match.totalAmount).toLocaleString()}`} />
+          <InfoRow icon={<AttachMoneyIcon />} text={`Total: ₹${Number(match.totalAmount).toLocaleString()}`} />
           {match.perPersonAmount > 0 && (
-            <InfoRow icon={<AttachMoneyIcon />} text={`Per Person: PKR ${Number(match.perPersonAmount).toLocaleString()}`} />
+            <InfoRow icon={<AttachMoneyIcon />} text={`Per Person: ₹${Number(match.perPersonAmount).toLocaleString()}`} />
           )}
           {match.description && (
             <InfoRow icon={<LocationOnIcon />} text={match.description} />
@@ -379,8 +379,8 @@ function MatchCard({ match, joined, isAdmin, actionLoading, onView, onJoin, onLe
           </Tooltip>
         )}
 
-        {/* Player: join / leave */}
-        {!isAdmin && isUpcoming && (
+        {/* Join / leave for everyone */}
+        {isUpcoming && (
           joined ? (
             <Button size="small" variant="contained" color="error"
               onClick={onLeave} disabled={actionLoading} sx={{ flex: 1 }}>

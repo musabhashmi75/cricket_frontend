@@ -26,6 +26,8 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CloseIcon from '@mui/icons-material/Close';
+import ImageIcon from '@mui/icons-material/Image';
 import { useParams, useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 
@@ -48,6 +50,7 @@ export default function MatchDetailsPage() {
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState('');
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -110,8 +113,8 @@ export default function MatchDetailsPage() {
               <Divider />
               <InfoGrid items={[
                 { label: 'Date & Time',   value: dayjs(match.dateTime).format('D MMM YYYY, h:mm A') },
-                { label: 'Total Amount',  value: `PKR ${Number(match.totalAmount).toLocaleString()}` },
-                { label: 'Per Person',    value: match.perPersonAmount > 0 ? `PKR ${Number(match.perPersonAmount).toLocaleString()}` : '—' },
+                { label: 'Total Amount',  value: `₹${Number(match.totalAmount).toLocaleString()}` },
+                { label: 'Per Person',    value: match.perPersonAmount > 0 ? `₹${Number(match.perPersonAmount).toLocaleString()}` : '—' },
                 { label: 'Players',       value: players.length },
                 { label: 'Paid',          value: paidCount },
                 { label: 'Unpaid',        value: unpaidCount },
@@ -145,10 +148,8 @@ export default function MatchDetailsPage() {
                     <Button
                       variant="text"
                       size="small"
-                      startIcon={<OpenInNewIcon />}
-                      href={myPayment.fileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      startIcon={<ImageIcon />}
+                      onClick={() => setPreviewUrl(myPayment.fileUrl)}
                     >
                       View uploaded proof
                     </Button>
@@ -214,12 +215,9 @@ export default function MatchDetailsPage() {
                                 <Tooltip title="View proof">
                                   <IconButton
                                     size="small"
-                                    href={payment.fileUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    component="a"
+                                    onClick={() => setPreviewUrl(payment.fileUrl)}
                                   >
-                                    <OpenInNewIcon fontSize="small" />
+                                    <ImageIcon fontSize="small" />
                                   </IconButton>
                                 </Tooltip>
                               ) : '—'}
@@ -244,7 +242,47 @@ export default function MatchDetailsPage() {
         onClose={() => setUploadOpen(false)}
         onSuccess={handleUploadSuccess}
       />
+
+      {/* Image Preview Dialog */}
+      <ImagePreviewDialog url={previewUrl} onClose={() => setPreviewUrl(null)} />
     </Layout>
+  );
+}
+
+// ─── Image Preview Dialog ───────────────────────────────────────────────────
+function ImagePreviewDialog({ url, onClose }) {
+  if (!url) return null;
+  const isPdf = url.toLowerCase().split('?')[0].endsWith('.pdf');
+  return (
+    <Dialog open={!!url} onClose={onClose} maxWidth="md" fullWidth>
+      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        Payment Proof
+        <IconButton size="small" onClick={onClose}><CloseIcon /></IconButton>
+      </DialogTitle>
+      <DialogContent sx={{ p: 1, textAlign: 'center', bgcolor: 'grey.100' }}>
+        {isPdf ? (
+          <iframe
+            src={url}
+            title="Payment proof"
+            width="100%"
+            height="520px"
+            style={{ border: 'none' }}
+          />
+        ) : (
+          <img
+            src={url}
+            alt="Payment proof"
+            style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain', display: 'block', margin: '0 auto' }}
+          />
+        )}
+      </DialogContent>
+      <DialogActions>
+        <Button href={url} target="_blank" rel="noopener noreferrer" startIcon={<OpenInNewIcon />} size="small">
+          Open in new tab
+        </Button>
+        <Button onClick={onClose}>Close</Button>
+      </DialogActions>
+    </Dialog>
   );
 }
 

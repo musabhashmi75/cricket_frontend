@@ -130,18 +130,18 @@ function AdminView({ data }) {
               <AccordionDetails>
                 <Grid container spacing={2} sx={{ mb: 2 }}>
                   <Grid item xs={6} sm={3}>
-                    <MetricBox label="Total Amount" value={`PKR ${Number(match.totalAmount).toLocaleString()}`} />
+                    <MetricBox label="Total Amount" value={`₹${Number(match.totalAmount).toLocaleString()}`} />
                   </Grid>
                   <Grid item xs={6} sm={3}>
                     <MetricBox
                       label="Per Person"
-                      value={match.perPersonAmount > 0 ? `PKR ${Number(match.perPersonAmount).toLocaleString()}` : '—'}
+                      value={match.perPersonAmount > 0 ? `₹${Number(match.perPersonAmount).toLocaleString()}` : '—'}
                     />
                   </Grid>
                   <Grid item xs={6} sm={3}>
                     <MetricBox
                       label="Total Pending"
-                      value={match.totalPendingAmount > 0 ? `PKR ${Number(match.totalPendingAmount).toLocaleString()}` : '—'}
+                      value={match.totalPendingAmount > 0 ? `₹${Number(match.totalPendingAmount).toLocaleString()}` : '—'}
                       highlight={match.totalPendingAmount > 0}
                     />
                   </Grid>
@@ -267,7 +267,7 @@ function PlayerView({ data }) {
                     <TableCell align="right">
                       <Typography variant="body2" fontWeight={600}>
                         {m.contributionAmount > 0
-                          ? `PKR ${Number(m.contributionAmount).toLocaleString()}`
+                          ? `₹${Number(m.contributionAmount).toLocaleString()}`
                           : '—'}
                       </Typography>
                     </TableCell>
